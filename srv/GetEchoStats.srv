@@ -1,0 +1,4 @@
+---
+int64 total_messages
+float64 average_latency
+string last_message_processed
