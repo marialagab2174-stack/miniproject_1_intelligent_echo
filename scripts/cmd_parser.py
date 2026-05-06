@@ -4,6 +4,8 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from miniproject_1_intelligent_echo.srv import GetHistory
+import re
+import os
 
 class CmdParser(Node):
     def __init__(self):
@@ -13,33 +15,47 @@ class CmdParser(Node):
         self.srv = self.create_service(GetHistory, 'get_history', self.get_history_callback)
         
         self.history = []
-        self.get_logger().info("Robot Écho Intelligent : Parser prêt.")
+        self.log_file = "robot_commands.log"
+        self.get_logger().info("✅ Robot Écho Intelligent (MAX) initialisé.")
 
     def cmd_callback(self, msg):
-        cmd_raw = msg.data.lower().strip()
-        parts = cmd_raw.split()
+        raw_text = msg.data.lower().strip()
         twist = Twist()
-        
-        try:
-            if 'avance' in parts:
-                twist.linear.x = float(parts[1])
-            elif 'recule' in parts:
-                twist.linear.x = -float(parts[1])
-            elif 'tourne_gauche' in parts:
-                twist.angular.z = float(parts[1])
-            elif 'tourne_droite' in parts:
-                twist.angular.z = -float(parts[1])
-            elif 'stop' in parts:
-                twist.linear.x = 0.0
-                twist.angular.z = 0.0
-            
+        valid = False
+
+        # Utilisation de REGEX pour un parsing professionnel
+        patterns = {
+            'avance': r'avance\s+(\d+\.?\d*)',
+            'recule': r'recule\s+(\d+\.?\d*)',
+            'tourne_gauche': r'tourne_gauche\s+(\d+\.?\d*)',
+            'tourne_droite': r'tourne_droite\s+(\d+\.?\d*)',
+            'stop': r'stop'
+        }
+
+        for cmd, pattern in patterns.items():
+            match = re.match(pattern, raw_text)
+            if match:
+                valid = True
+                if cmd == 'avance': twist.linear.x = float(match.group(1))
+                elif cmd == 'recule': twist.linear.x = -float(match.group(1))
+                elif cmd == 'tourne_gauche': twist.angular.z = float(match.group(1))
+                elif cmd == 'tourne_droite': twist.angular.z = -float(match.group(1))
+                elif cmd == 'stop': twist.linear.x = 0.0; twist.angular.z = 0.0
+                break
+
+        if valid:
             self.pub.publish(twist)
-            self.history.append(cmd_raw)
-            if len(self.history) > 10: self.history.pop(0)
-            self.get_logger().info(f"Exécution : {cmd_raw}")
-            
-        except (IndexError, ValueError):
-            self.get_logger().error(f"Commande invalide : {cmd_raw}")
+            self.add_to_history(raw_text)
+            self.get_logger().info(f"🚀 Commande exécutée : {raw_text}")
+        else:
+            self.get_logger().warn(f"⚠️ Commande ignorée (Format invalide) : {raw_text}")
+
+    def add_to_history(self, cmd):
+        self.history.append(cmd)
+        if len(self.history) > 10: self.history.pop(0)
+        # Log persistant
+        with open(self.log_file, "a") as f:
+            f.write(f"[{self.get_clock().now().to_msg().sec}] {cmd}\n")
 
     def get_history_callback(self, request, response):
         response.history = self.history
@@ -48,4 +64,9 @@ class CmdParser(Node):
 def main():
     rclpy.init()
     node = CmdParser()
-    rclpy.spin(node)
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    node.destroy_node()
+    rclpy.shutdown()
