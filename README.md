@@ -1,34 +1,25 @@
-# 🔊 Intelligent Echo - ROS 2 Communication Pro
+# 🔊 Robot Écho Intelligent - Interpréteur de Commandes
 
-Ce projet est une implémentation avancée d'un système d'écho capable de traiter des flux de données textuelles avec une logique métier dynamique.
+Ce robot écoute des commandes textuelles et les traduit instantanément en vecteurs de mouvement pour une base mobile.
 
 ## 📋 Spécifications Techniques
-- **Traitement Dynamique** : Transformation de chaînes de caractères via 3 modes (UPPERCASE, REVERSE, CYBER).
-- **Service-Oriented Stats** : Fournit une analyse de performance (latence, volume) via le service `/get_echo_stats`.
-- **Paramétrage à Chaud** : Possibilité de modifier le mode de traitement via `ros2 param set` sans interruption de service.
+- **Parser de Commandes** : Traduit 'avance N' en `geometry_msgs/Twist`.
+- **Historique de Session** : Service `/get_history` retournant les 10 dernières actions.
+- **Multi-Node Launch** : Démarrage coordonné du parser et du logger.
 
-## 🛠 Interfaces
-- **Topic Input** : `/input_topic` (std_msgs/String)
-- **Topic Output** : `/output_topic` (std_msgs/String)
-- **Service** : `/get_echo_stats` (Custom SRV)
+## 🚀 Commandes Supportées
+- `avance [vitesse]`
+- `recule [vitesse]`
+- `tourne_gauche [angle]`
+- `tourne_droite [angle]`
+- `stop`
 
-## 🚀 Utilisation
+## 🛠 Utilisation
 ```bash
-# Build
-colcon build --packages-select miniproject_1_intelligent_echo
-source install/setup.bash
-
-# Lancer le noeud
-ros2 run miniproject_1_intelligent_echo intelligent_echo.py
-
-# Changer le mode dynamiquement
-ros2 param set /intelligent_echo echo_mode "REVERSE"
-
-# Consulter les stats
-ros2 service call /get_echo_stats miniproject_1_intelligent_echo/srv/GetEchoStats
+ros2 launch miniproject_1_intelligent_echo echo_robot.launch.py
+ros2 topic pub /cmd_text std_msgs/String "data: 'avance 0.5'"
+ros2 service call /get_history miniproject_1_intelligent_echo/srv/GetHistory
 ```
 
 ---
-**Développeur :** Maria Lagab  
-**Spécialité :** Robotique et Système Intelligent  
-**Machine :** Dell Latitude 7400
+**Maria Lagab** - *Spécialité Robotique*
